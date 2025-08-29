@@ -1,15 +1,16 @@
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
-const User = require('../models/user.model.js')
+const User = require('../models/user.model.js');
+const AppError = require('../utils/AppError.js');
 
 //===================SIGNUP========================
-exports.signup = async (req,res) => {
+exports.signup = async (req,res,next) => {
     try {
         const {name, email, password} = req.body;
 
         const existinguser = await User.findOne({email});
         if(existinguser){
-            return res.status(400).json({ success: false, message: "Email already exists"})
+            return next(new AppError("email already exists", 400))
         }
 
         const hashedPassword = await bcrypt.hash(password, 10)
@@ -28,26 +29,23 @@ exports.signup = async (req,res) => {
             user
         })
     } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: error.message
-        })
+        next(error)
     }
 }
 
 //===================LOGIN========================
-exports.login = async (req, res) => {
+exports.login = async (req, res, next) => {
     try {
         const {email, password} = req.body
 
         const user = await User.findOne({email});
         if(!user){
-            return res.status(404).json({success: false, message: "User not found"})
+            return next(new AppError("User not found", 404))
         }
 
         const isMatch = await bcrypt.compare(password, user.password)
         if(!isMatch){
-            return res.status(401).json({success:false,message:"incorrect password"})
+            return next(new AppError("incorrect password", 401))
         }
 
         const token = jwt.sign(
@@ -67,9 +65,6 @@ exports.login = async (req, res) => {
             }
         })
     } catch (error) {
-        res.status(400).json({
-            success: false,
-            message: error.message
-        })
+        next(error)
     }
 }
